@@ -1,0 +1,46 @@
+:root {
+  --bg: #F5F5F0;
+  --paper: #FFFFFF;
+  --ink: #1E2320;
+  --ink-soft: #5B6259;
+  --line: #DDE0D3;
+  --primary: #1B4332;
+  --primary-soft: #E7EFE9;
+  --income: #2D6A4F;
+  --expense: #A6491F;
+  --expense-soft: #F3E4DA;
+  --gold: #B08A2E;
+
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; }
+
+a { color: inherit; }
+
+button { font-family: inherit; cursor: pointer; }
+
+input, select, textarea { font-family: inherit; font-size: 1rem; }
+
+::selection { background: var(--gold); color: var(--paper); }
+
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
