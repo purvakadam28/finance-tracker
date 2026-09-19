@@ -1,10 +1,16 @@
-const fmt = (n) => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) =>
+  Number(n).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 export default function TransactionList({ transactions, onDelete }) {
   if (transactions.length === 0) {
     return (
       <div style={styles.empty}>
-        <p style={{ margin: 0 }}>Nothing logged yet. Add your first transaction above.</p>
+        <p style={{ margin: 0 }}>
+          Nothing logged yet. Add your first transaction above.
+        </p>
       </div>
     );
   }
@@ -18,20 +24,42 @@ export default function TransactionList({ transactions, onDelete }) {
         <span style={{ textAlign: 'right' }}>Amount</span>
         <span></span>
       </div>
+
       {transactions.map((tx) => (
         <div key={tx.id} style={styles.row}>
-          <span className="mono" style={styles.date}>{tx.date}</span>
-          <span>
-            <span style={styles.badge(tx.type)}>{tx.category}</span>
+          <span className="mono" style={styles.date}>
+            {tx.date}
           </span>
-          <span style={styles.note}>{tx.note || '—'}</span>
+
+          <span>
+            <span style={styles.badge(tx.type)}>
+              {tx.category}
+            </span>
+          </span>
+
+          <span style={styles.note}>
+            {tx.note || '—'}
+          </span>
+
           <span
             className="mono"
-            style={{ textAlign: 'right', fontWeight: 700, color: tx.type === 'income' ? 'var(--income)' : 'var(--expense)' }}
+            style={{
+              textAlign: 'right',
+              fontWeight: 700,
+              color:
+                tx.type === 'income'
+                  ? 'var(--income)'
+                  : 'var(--expense)',
+            }}
           >
-            {tx.type === 'income' ? '+' : '−'}${fmt(tx.amount)}
+            {tx.type === 'income' ? '+' : '−'}₹{fmt(tx.amount)}
           </span>
-          <button onClick={() => onDelete(tx.id)} style={styles.deleteBtn} aria-label={`Delete ${tx.category} transaction`}>
+
+          <button
+            onClick={() => onDelete(tx.id)}
+            style={styles.deleteBtn}
+            aria-label={`Delete ${tx.category} transaction`}
+          >
             ×
           </button>
         </div>
@@ -41,7 +69,13 @@ export default function TransactionList({ transactions, onDelete }) {
 }
 
 const styles = {
-  wrap: { background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 4, overflow: 'hidden' },
+  wrap: {
+    background: 'var(--paper)',
+    border: '1px solid var(--line)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+
   row: {
     display: 'grid',
     gridTemplateColumns: '110px 140px 1fr 120px 32px',
@@ -51,6 +85,7 @@ const styles = {
     borderBottom: '1px solid var(--line)',
     fontSize: 14,
   },
+
   headRow: {
     fontSize: 11,
     textTransform: 'uppercase',
@@ -59,16 +94,34 @@ const styles = {
     background: 'var(--bg)',
     fontWeight: 600,
   },
-  date: { color: 'var(--ink-soft)', fontSize: 13 },
-  note: { color: 'var(--ink-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+
+  date: {
+    color: 'var(--ink-soft)',
+    fontSize: 13,
+  },
+
+  note: {
+    color: 'var(--ink-soft)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+
   badge: (type) => ({
     fontSize: 12,
     padding: '3px 9px',
     borderRadius: 20,
-    background: type === 'income' ? 'var(--primary-soft)' : 'var(--expense-soft)',
-    color: type === 'income' ? 'var(--primary)' : 'var(--expense)',
+    background:
+      type === 'income'
+        ? 'var(--primary-soft)'
+        : 'var(--expense-soft)',
+    color:
+      type === 'income'
+        ? 'var(--primary)'
+        : 'var(--expense)',
     fontWeight: 600,
   }),
+
   deleteBtn: {
     background: 'transparent',
     border: 'none',
@@ -77,6 +130,7 @@ const styles = {
     lineHeight: 1,
     padding: 4,
   },
+
   empty: {
     background: 'var(--paper)',
     border: '1px dashed var(--line)',
