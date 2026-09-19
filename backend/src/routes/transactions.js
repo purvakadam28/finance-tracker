@@ -3,111 +3,166 @@ import db from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
 router.use(requireAuth);
 
-// GET /api/transactions - list all transactions for the logged-in user
-router.get('/', (req, res) => {
-  const rows = db
-    .prepare('SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC, id DESC')
-    .all(req.userId);
-  res.json(rows);
+// GET /api/transactions
+router.get('/', async (req, res) => {
+  const result = await db.query(
+    `SELECT * FROM transactions
+     WHERE user_id = $1
+     ORDER BY date DESC, id DESC`,
+    [req.userId]
+  );
+
+  res.json(result.rows);
 });
 
-// POST /api/transactions - create a transaction
-router.post('/', (req, res) => {
+// POST /api/transactions
+router.post('/', async (req, res) => {
   const { type, amount, category, note, date } = req.body;
 
   if (!type || !['income', 'expense'].includes(type)) {
-    return res.status(400).json({ error: "Type must be 'income' or 'expense'" });
+    return res.status(400).json({
+      error: "Type must be 'income' or 'expense'",
+    });
   }
+
   if (!amount || Number(amount) <= 0) {
-    return res.status(400).json({ error: 'Amount must be a positive number' });
+    return res.status(400).json({
+      error: 'Amount must be a positive number',
+    });
   }
+
   if (!category) {
-    return res.status(400).json({ error: 'Category is required' });
+    return res.status(400).json({
+      error: 'Category is required',
+    });
   }
+
   if (!date) {
-    return res.status(400).json({ error: 'Date is required' });
+    return res.status(400).json({
+      error: 'Date is required',
+    });
   }
 
-  const result = db
-    .prepare(
-      `INSERT INTO transactions (user_id, type, amount, category, note, date)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(req.userId, type, Number(amount), category, note || null, date);
+  const result = await db.query(
+    `INSERT INTO transactions
+      (user_id, type, amount, category, note, date)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING *`,
+    [
+      req.userId,
+      type,
+      Number(amount),
+      category,
+      note || null,
+      date,
+    ]
+  );
 
-  const created = db.prepare('SELECT * FROM transactions WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json(created);
+  res.status(201).json(result.rows[0]);
 });
 
-// PUT /api/transactions/:id - update a transaction
-router.put('/:id', (req, res) => {
-  const existing = db
-    .prepare('SELECT * FROM transactions WHERE id = ? AND user_id = ?')
-    .get(req.params.id, req.userId);
+// PUT /api/transactions/:id
+router.put('/:id', async (req, res) => {
+  const existingResult = await db.query(
+    `SELECT * FROM transactions
+     WHERE id = $1 AND user_id = $2`,
+    [req.params.id, req.userId]
+  );
+
+  const existing = existingResult.rows[0];
 
   if (!existing) {
-    return res.status(404).json({ error: 'Transaction not found' });
+    return res.status(404).json({
+      error: 'Transaction not found',
+    });
   }
 
   const { type, amount, category, note, date } = req.body;
 
-  db.prepare(
-    `UPDATE transactions SET type = ?, amount = ?, category = ?, note = ?, date = ?
-     WHERE id = ? AND user_id = ?`
-  ).run(
-    type ?? existing.type,
-    amount ?? existing.amount,
-    category ?? existing.category,
-    note ?? existing.note,
-    date ?? existing.date,
-    req.params.id,
-    req.userId
+  const result = await db.query(
+    `UPDATE transactions
+     SET type = $1,
+         amount = $2,
+         category = $3,
+         note = $4,
+         date = $5
+     WHERE id = $6 AND user_id = $7
+     RETURNING *`,
+    [
+      type ?? existing.type,
+      amount ?? existing.amount,
+      category ?? existing.category,
+      note ?? existing.note,
+      date ?? existing.date,
+      req.params.id,
+      req.userId,
+    ]
   );
 
-  const updated = db.prepare('SELECT * FROM transactions WHERE id = ?').get(req.params.id);
-  res.json(updated);
+  res.json(result.rows[0]);
 });
 
 // DELETE /api/transactions/:id
-router.delete('/:id', (req, res) => {
-  const result = db
-    .prepare('DELETE FROM transactions WHERE id = ? AND user_id = ?')
-    .run(req.params.id, req.userId);
+router.delete('/:id', async (req, res) => {
+  const result = await db.query(
+    `DELETE FROM transactions
+     WHERE id = $1 AND user_id = $2
+     RETURNING id`,
+    [req.params.id, req.userId]
+  );
 
-  if (result.changes === 0) {
-    return res.status(404).json({ error: 'Transaction not found' });
+  if (result.rows.length === 0) {
+    return res.status(404).json({
+      error: 'Transaction not found',
+    });
   }
+
   res.status(204).send();
 });
 
-// GET /api/transactions/summary - totals + breakdown by category
-router.get('/meta/summary', (req, res) => {
-  const totals = db
-    .prepare(
-      `SELECT
-         COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
-         COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
-       FROM transactions WHERE user_id = ?`
-    )
-    .get(req.userId);
+// GET /api/transactions/meta/summary
+router.get('/meta/summary', async (req, res) => {
+  const totalsResult = await db.query(
+    `SELECT
+       COALESCE(
+         SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END),
+         0
+       ) AS income,
+       COALESCE(
+         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END),
+         0
+       ) AS expense
+     FROM transactions
+     WHERE user_id = $1`,
+    [req.userId]
+  );
 
-  const byCategory = db
-    .prepare(
-      `SELECT category, SUM(amount) as total
-       FROM transactions
-       WHERE user_id = ? AND type = 'expense'
-       GROUP BY category
-       ORDER BY total DESC`
-    )
-    .all(req.userId);
+  const byCategoryResult = await db.query(
+    `SELECT
+       category,
+       SUM(amount) AS total
+     FROM transactions
+     WHERE user_id = $1
+       AND type = 'expense'
+     GROUP BY category
+     ORDER BY total DESC`,
+    [req.userId]
+  );
+
+  const income = Number(totalsResult.rows[0].income);
+  const expense = Number(totalsResult.rows[0].expense);
 
   res.json({
-    income: totals.income,
-    expense: totals.expense,
-    balance: totals.income - totals.expense,
-    byCategory,
+    income,
+    expense,
+    balance: income - expense,
+    byCategory: byCategoryResult.rows.map((row) => ({
+      category: row.category,
+      total: Number(row.total),
+    })),
   });
 });
 
